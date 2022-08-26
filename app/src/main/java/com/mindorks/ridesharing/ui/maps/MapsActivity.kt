@@ -1,5 +1,6 @@
 package com.mindorks.ridesharing.ui.maps
 
+import android.Manifest
 import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -10,6 +11,7 @@ import android.util.Log
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
 import com.google.android.gms.common.api.Status
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
@@ -97,22 +99,30 @@ class MapsActivity : AppCompatActivity(), MapsView, OnMapReadyCallback {
     }
 
     private fun moveCamera(latLng: LatLng?) {
-        googleMap.moveCamera(CameraUpdateFactory.newLatLng(latLng))
+        latLng?.let { CameraUpdateFactory.newLatLng(it) }?.let { googleMap.moveCamera(it) }
     }
 
     private fun animateCamera(latLng: LatLng?) {
-        val cameraPosition = CameraPosition.Builder().target(latLng).zoom(15.5f).build()
-        googleMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition))
+        val cameraPosition = latLng?.let { CameraPosition.Builder().target(it).zoom(15.5f).build() }
+        cameraPosition?.let { CameraUpdateFactory.newCameraPosition(it) }?.let {
+            googleMap.animateCamera(
+                it
+            )
+        }
     }
 
-    private fun addCarMarkerAndGet(latLng: LatLng): Marker {
+    private fun addCarMarkerAndGet(latLng: LatLng): Marker? {
         val bitmapDescriptor = BitmapDescriptorFactory.fromBitmap(MapUtils.getCarBitmap(this))
-        return googleMap.addMarker(MarkerOptions().position(latLng).flat(true).icon(bitmapDescriptor))
+        return googleMap.addMarker(
+            MarkerOptions().position(latLng).flat(true).icon(bitmapDescriptor)
+        )
     }
 
-    private fun addOriginDestinationMarkerAndGet(latLng: LatLng): Marker {
+    private fun addOriginDestinationMarkerAndGet(latLng: LatLng): Marker? {
         val bitmapDescriptor = BitmapDescriptorFactory.fromBitmap(MapUtils.getDestinationBitmap())
-        return googleMap.addMarker(MarkerOptions().position(latLng).flat(true).icon(bitmapDescriptor))
+        return googleMap.addMarker(
+            MarkerOptions().position(latLng).flat(true).icon(bitmapDescriptor)
+        )
     }
 
     private fun setCurrentLocationAsPickUp() {
@@ -122,6 +132,22 @@ class MapsActivity : AppCompatActivity(), MapsView, OnMapReadyCallback {
 
     private fun enableMyLocationOnMap() {
         googleMap.setPadding(0, ViewUtils.dpToPx(48f), 0, 0)
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            val req = arrayOf<String>(
+                "Manifest.permission.ACCESS_COARSE_LOCATION",
+                "Manifest.permission.ACCESS_BACKGROUND_LOCATION",
+                "Manifest.permission.ACCESS_FINE_LOCATION"
+            )
+            ActivityCompat.requestPermissions(this, req, 109)
+            return
+        }
         googleMap.isMyLocationEnabled = true
     }
 
@@ -149,6 +175,22 @@ class MapsActivity : AppCompatActivity(), MapsView, OnMapReadyCallback {
                 // Few more things we can do here:
                 // For example: Update the location of user on server
             }
+        }
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            val req = arrayOf<String>(
+                "Manifest.permission.ACCESS_COARSE_LOCATION",
+                "Manifest.permission.ACCESS_BACKGROUND_LOCATION",
+                "Manifest.permission.ACCESS_FINE_LOCATION"
+            )
+            ActivityCompat.requestPermissions(this, req, 109)
+            return
         }
         fusedLocationProviderClient?.requestLocationUpdates(
             locationRequest,
@@ -292,7 +334,9 @@ class MapsActivity : AppCompatActivity(), MapsView, OnMapReadyCallback {
         nearbyCabMarkerList.clear()
         for (latLng in latLngList) {
             val nearbyCabMarker = addCarMarkerAndGet(latLng)
-            nearbyCabMarkerList.add(nearbyCabMarker)
+            if (nearbyCabMarker != null) {
+                nearbyCabMarkerList.add(nearbyCabMarker)
+            }
         }
     }
 
@@ -342,7 +386,7 @@ class MapsActivity : AppCompatActivity(), MapsView, OnMapReadyCallback {
         if (previousLatLngFromServer == null) {
             currentLatLngFromServer = latLng
             previousLatLngFromServer = currentLatLngFromServer
-            movingCabMarker?.position = currentLatLngFromServer
+            movingCabMarker?.position = currentLatLngFromServer as LatLng
             movingCabMarker?.setAnchor(0.5f, 0.5f)
             animateCamera(currentLatLngFromServer)
         } else {
